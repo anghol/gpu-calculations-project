@@ -19,7 +19,6 @@
 
 // выделение памяти для хранения результата на CPU
 double results[M];
-double summed_results[M];
 
 // подынтегральная функция
 __host__ __device__ double function(double x)
@@ -32,22 +31,6 @@ __global__ void simpson_kernel(double *results)
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-    if (idx < M)
-    {
-        double x_2i = A + 2*idx * H;
-        double x_2i_1 = A + (2*idx + 1) * H;
-        double x_2i_2 = A + (2*idx + 2) * H;
-
-        double y_2i = function(x_2i);
-        double y_2i_1 = function(x_2i_1);
-        double y_2i_2 = function(x_2i_2);
-
-        results[idx] = (H / 3) * (y_2i + 4*y_2i_1 + y_2i_2);
-    }
-}
-
-void simpson(int idx)
-{
     if (idx < M)
     {
         double x_2i = A + 2*idx * H;
@@ -119,16 +102,25 @@ uint64_t run_in_process()
     struct timespec start, stop;
     clock_gettime(CLOCK_MONOTONIC, &start);
 
-    // вычисление значения для каждого из M подотрезков
-    for (int i=0; i<M; ++i) 
-    {
-	    simpson(i);
-    }
+    double integral = 0;
+    double x_2i, x_2i_1, x_2i_2;
+    double y_2i, y_2i_1, y_2i_2;
 
-    // суммирование
-    double integral = 0.0;
-    for (int i = 0; i < M; ++i) {
-        integral += results[i];
+    // вычисление значения для каждого из M подотрезков
+    for (int i = 0; i < M; ++i) 
+    {
+        if (i < M)
+        {
+            x_2i = A + 2*i * H;
+            x_2i_1 = A + (2*i + 1) * H;
+            x_2i_2 = A + (2*i + 2) * H;
+
+            y_2i = function(x_2i);
+            y_2i_1 = function(x_2i_1);
+            y_2i_2 = function(x_2i_2);
+
+            integral += (H / 3) * (y_2i + 4*y_2i_1 + y_2i_2);
+        }
     }
     printf("I = %f\n", integral);
 
