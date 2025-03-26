@@ -1,0 +1,31 @@
+{
+    "servers": [
+        "http://127.0.0.1:5000"
+    ],
+    "problems": [
+        {
+            "function": "exp(-x*x)",
+            "a": -100000,
+            "b": 100000,
+            "blocksize": 512
+        },
+        {
+            "function": "8 + 2*x - x*x",
+            "a": -2,
+            "b": 4,
+            "blocksize": 32
+        },
+        {
+            "function": "1 / (1 + x*x)",
+            "a": -1000000,
+            "b": 1000000,
+            "blocksize": 256
+        },
+        {
+            "function": "sin(x)/x",
+            "a": 0.00001,
+            "b": 1000000,
+            "blocksize": 512
+        }
+    ]
+}

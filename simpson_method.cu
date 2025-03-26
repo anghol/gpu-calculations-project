@@ -18,6 +18,7 @@
 // подынтегральная функция
 __host__ __device__ double function(double x)
 {   
+    // return 1 / (1 + x*x);
     return exp(-x*x);
     // return 8 + 2*x - x*x;
 }
