@@ -9,13 +9,15 @@
 
 #define MILLION 1000000
 #define BILLION 1000000000L
-#define A -1048576  // взяла кратным 512
-#define B 1048576  // взяла кратным 512
-#define H 0.01
-#define N (int)((B-A) / H)
-#define M (int)(N / 2)
 
 #define BLOCK_SIZE 512
+
+// параметры для интегрирования
+#define A -1048576  // взяла кратным 512
+#define B 1048576  // взяла кратным 512
+#define H 0.01  // шаг
+#define N (int)((B-A) / H)  // число подотрезков
+#define M (int)(N / 2)
 
 // выделение памяти для хранения результата на CPU
 double results[M];
@@ -31,6 +33,7 @@ __global__ void simpson_kernel(double *results)
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
+    // вычисление значения для удвоеннго подотрезка
     if (idx < M)
     {
         double x_2i = A + 2*idx * H;
@@ -48,6 +51,7 @@ __global__ void simpson_kernel(double *results)
 // запуск на GPU
 uint64_t run_in_gpu()
 {
+    // создание события
     float dt_gpu;
     cudaEvent_t start_gpu, stop_gpu;
     cudaEventCreate(&start_gpu);
@@ -55,18 +59,18 @@ uint64_t run_in_gpu()
 
     int num_bytes = sizeof(double) * M; 
 
-    // указатели на память на видеокарте
+    // указатель на память на видеокарте
     double *results_gpu = NULL;
 
     // старт события
     cudaEventRecord(start_gpu, 0);
 
     // выделение памяти на видеокарте
-    cudaMalloc((void**)&results_gpu, sizeof(double) * M);
+    cudaMalloc((void**)&results_gpu, num_bytes);
 
     // создание конфигурации потоков и блоков
     dim3 blockSize = dim3(BLOCK_SIZE, 1);
-    dim3 numBlocks = dim3(M / blockSize.x, 1);
+    dim3 numBlocks = dim3(M / BLOCK_SIZE, 1);
 
     // вызов ядра для метода Симпсона
     simpson_kernel<<<numBlocks, blockSize>>>(results_gpu);
@@ -76,7 +80,7 @@ uint64_t run_in_gpu()
 
     // суммирование
     double integral = 0.0;
-    for (int i = 0; i < M; ++i) {
+    for (int i = 0; i < M; i++) {
         integral += results[i];
     }
     printf("I = %f\n", integral);
@@ -106,7 +110,7 @@ uint64_t run_in_process()
     double x_2i, x_2i_1, x_2i_2;
     double y_2i, y_2i_1, y_2i_2;
 
-    // вычисление значения для каждого из M подотрезков
+    // вычисление значения для каждого из M удвоенных подотрезков
     for (int i = 0; i < M; ++i) 
     {
         if (i < M)
@@ -134,10 +138,6 @@ int main()
     // вычисления на CPU
     uint64_t dt_process = run_in_process();
     printf("Time on CPU: %f s \n", (double) dt_process / BILLION);
-
-    // зануление массива results после вычислений на CPU
-    for (int i = 0; i < M; ++i)
-	results[i] = 0;
 
     // вычисления на GPU
     uint64_t dt_gpu = run_in_gpu();

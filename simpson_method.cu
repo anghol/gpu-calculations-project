@@ -12,7 +12,7 @@
 
 #define BLOCK_SIZE 512
 
-#define EPS 0.01
+#define EPS 0.01  // максимальное допустимое значение шага
 
 
 // подынтегральная функция
@@ -28,6 +28,7 @@ __global__ void simpson_kernel(double a, int m, double h, double *results)
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
+    // вычисление значения для удвоеннго подотрезка
     if (idx < m)
     {
         double x_2i = a + 2*idx * h;
@@ -45,13 +46,15 @@ __global__ void simpson_kernel(double a, int m, double h, double *results)
 // запуск на GPU
 uint64_t run_in_gpu(double a, int m, double h)
 {
+    // создание события
     float dt_gpu;
     cudaEvent_t start_gpu, stop_gpu;
     cudaEventCreate(&start_gpu);
     cudaEventCreate(&stop_gpu);
 
-    // выделение памяти на CPU
     int num_bytes = sizeof(double) * m; 
+
+    // выделение памяти на CPU
     double *results = (double *)malloc(num_bytes);
 
     // указатели на память на видеокарте
@@ -65,7 +68,7 @@ uint64_t run_in_gpu(double a, int m, double h)
 
     // создание конфигурации потоков и блоков
     dim3 blockSize = dim3(BLOCK_SIZE, 1);
-    dim3 numBlocks = dim3(m / blockSize.x, 1);
+    dim3 numBlocks = dim3(m / BLOCK_SIZE, 1);
 
     // вызов ядра для метода Симпсона
     simpson_kernel<<<numBlocks, blockSize>>>(a, m, h, results_gpu);
@@ -137,6 +140,7 @@ int main()
     double a = -100000;
     double b = 100000; 
 
+    // вычисление количества подотрезков - n и m должны быть кратны BLOCK_SIZE
     int n_min = (int)((b-a) / EPS);
     int n = (n_min / (BLOCK_SIZE*2)) * (BLOCK_SIZE*2) + (n_min % (BLOCK_SIZE*2)) * (BLOCK_SIZE*2);
     int m = (int)(n / 2);
